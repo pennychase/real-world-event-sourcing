@@ -3,6 +3,19 @@ defmodule Projectors.Leaderboard do
 	use GenServer
 	require Logger
 
+	# Example
+	#
+	# iex> {:ok, pid} = Projectors.Leaderboard.start_link()      
+	# iex> Projectors.Leaderboard.apply_event(pid, %{event_type: :zombie_killed, attacker: "Big Joe"}) 
+	# iex> Projectors.Leaderboard.apply_event(pid, %{event_type: :zombie_killed, attacker: "Big Joe"}) 
+	# iex> Projectors.Leaderboard.apply_event(pid, %{event_type: :zombie_killed, attacker: "Sam"}) 
+	# iex> Projectors.Leaderboard.get_top10(pid)                                                                                                 
+  # [{ "Big Joe", 2}, {"Sam", 1}]
+  # iex> Projectors.Leaderboard.apply_event(pid, %{event_type: :week_completed})                                                              
+  # iex> Projectors.Leaderboard.get_top10(pid)                                                                                                
+	# []
+
+
 	# Client API
 	def start_link() do
 		GenServer.start_link(__MODULE__, nil)
@@ -40,6 +53,12 @@ defmodule Projectors.Leaderboard do
 	def handle_cast({:handle_event, %{event_type: :zombie_killed, attacker: att}}, state) do
 		new_scores = Map.update(state.scores, att, 1, &(&1 + 1))
 		{:noreply, %{state | scores: new_scores, top10: rerank(new_scores)}}
+	end
+
+	# Advanced leaderboard that resets each week
+	@impl true
+	def handle_cast({:handle_event, %{event_type: :week_completed}}, _state) do
+		{:noreply, %{scores: %{}, top10: []}}
 	end
 
 	defp rerank(scores) when is_map(scores) do
